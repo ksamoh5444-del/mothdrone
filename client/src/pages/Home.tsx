@@ -131,14 +131,6 @@ function ViewportOverlay({ mode }: { mode: SceneMode }) {
 
       {/* Scanline overlay */}
       <div className="scanline-overlay" />
-
-      {/* Vignette */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse at 40% 50%, transparent 40%, rgba(255,255,255,0.15) 100%)',
-        pointerEvents: 'none',
-        zIndex: 2,
-      }} />
     </>
   );
 }
@@ -182,14 +174,6 @@ export default function Home() {
 
         {/* 3D Canvas (65%) */}
         <div style={{ flex: '0 0 65%', position: 'relative', overflow: 'hidden', background: '#f8fafc' }}>
-          {/* Canvas background gradient */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'radial-gradient(ellipse 80% 60% at 45% 50%, rgba(226,232,240,0.3) 0%, rgba(248,250,252,1) 75%)',
-            pointerEvents: 'none',
-            zIndex: 1,
-          }} />
-
           {/* Tactical overlay elements */}
           <ViewportOverlay mode={mode} />
 
