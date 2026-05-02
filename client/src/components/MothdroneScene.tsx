@@ -499,7 +499,8 @@ function RadomeShell({ opacity }: { opacity: number }) {
   );
 }
 
-// ─── HPM Beam (Emitted from Tier 4 Antenna) ───────────────────────
+// ─── HPM Beam (Emitted from Tier 4 Antenna Apex) ─────────────────
+// CRITICAL FIX: Beam originates from the phased array tip (Tier 4 apex)
 function HPMBeam({ active }: { active: boolean }) {
   const beamRef = useRef<THREE.Group>(null);
   const coreRef = useRef<THREE.Mesh>(null);
@@ -550,23 +551,28 @@ function HPMBeam({ active }: { active: boolean }) {
   });
 
   return (
-    <group ref={beamRef} position={[5, 0, 0]}>
-      <mesh ref={outerRef} position={[4, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
-        <cylinderGeometry args={[0.24, 0.24, 8, 20]} />
-        <meshBasicMaterial color="#1d4ed8" transparent opacity={0.05} side={THREE.BackSide} />
+    // Beam originates at Tier 4 apex (X=5.0) and travels forward
+    <group ref={beamRef} position={[5.0, 0, 0]}>
+      {/* Outer beam envelope (low opacity blue) */}
+      <mesh ref={outerRef} position={[4.5, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
+        <cylinderGeometry args={[0.28, 0.28, 9, 20]} />
+        <meshBasicMaterial color="#1d4ed8" transparent opacity={0.06} side={THREE.BackSide} />
       </mesh>
-      <mesh ref={glowRef} position={[4, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
-        <cylinderGeometry args={[0.11, 0.11, 8, 18]} />
-        <meshBasicMaterial color="#3b82f6" transparent opacity={0.2} side={THREE.BackSide} />
+      {/* Middle glow layer */}
+      <mesh ref={glowRef} position={[4.5, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
+        <cylinderGeometry args={[0.13, 0.13, 9, 18]} />
+        <meshBasicMaterial color="#3b82f6" transparent opacity={0.25} side={THREE.BackSide} />
       </mesh>
-      <mesh ref={coreRef} position={[4, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
-        <cylinderGeometry args={[0.024, 0.024, 8, 14]} />
-        <meshBasicMaterial color="#93c5fd" transparent opacity={0.92} />
+      {/* Core beam (bright blue, highly visible) */}
+      <mesh ref={coreRef} position={[4.5, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
+        <cylinderGeometry args={[0.028, 0.028, 9, 16]} />
+        <meshBasicMaterial color="#93c5fd" transparent opacity={0.95} />
       </mesh>
+      {/* Beam origin glow at antenna tip */}
       {active && (
         <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[0.13, 18, 18]} />
-          <meshBasicMaterial color="#60a5fa" transparent opacity={0.65} />
+          <sphereGeometry args={[0.16, 20, 20]} />
+          <meshBasicMaterial color="#60a5fa" transparent opacity={0.75} />
         </mesh>
       )}
     </group>
@@ -659,28 +665,28 @@ function ShahedDrone({ visible, hit }: { visible: boolean; hit: boolean }) {
 // ─── Presentation Mode Annotations ───────────────────────────────
 const TIER_ANNOTATIONS = [
   {
-    x: 1.0, y: 1.15,
+    x: 1.0, y: 1.35,
     label: 'Tier 1',
     arabicDesc: 'مصدر الطاقة النبضية',
     enDesc: 'KVI-3 Pulse Source\nCharges from drone battery, pulses on command',
     color: '#0d9488',
   },
   {
-    x: 2.025, y: 1.2,
+    x: 2.025, y: 1.45,
     label: 'Tier 2',
     arabicDesc: 'درع فاراداي',
     enDesc: 'Copper EMI Shield\nProtects drone avionics from backscatter',
     color: '#b87333',
   },
   {
-    x: 2.775, y: 1.2,
+    x: 2.775, y: 1.45,
     label: 'Tier 3',
     arabicDesc: 'مضخم RF وتبريد',
     enDesc: 'GaN RF Amplifier\nConverts pulse to RF, amplifies signal',
     color: '#ff6b35',
   },
   {
-    x: 4.25, y: 0.8,
+    x: 4.25, y: 1.1,
     label: 'Tier 4',
     arabicDesc: 'هوائي الانبعاث',
     enDesc: 'Phased Array Antenna\nEmits focused HPM beam toward target',
@@ -726,7 +732,7 @@ function CameraController({ mode }: { mode: SceneMode }) {
 // ─── Main Scene Content ───────────────────────────────────────────
 function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
   const explodeOffsets = mode === 'exploded'
-    ? { t1: -2.0, t2: -0.65, t3: 0.65, t4: 2.0 }
+    ? { t1: -3.2, t2: -1.6, t3: 1.6, t4: 3.2 }
     : { t1: 0, t2: 0, t3: 0, t4: 0 };
 
   const attackActive = mode === 'attack';
@@ -744,13 +750,13 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
 
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.28} />
-      <directionalLight position={[10, 10, 5]} intensity={1.5} color="#ffffff" castShadow shadow-mapSize={[2048, 2048]} />
-      <directionalLight position={[-6, 6, -4]} intensity={0.8} color="#b0d4ff" />
-      <pointLight position={[2.5, 4, 4]} intensity={1.1} color="#3b82f6" distance={12} />
-      <pointLight position={[2.5, -3, -3]} intensity={0.6} color="#f59e0b" distance={10} />
-      <spotLight position={[0, 6, 2]} angle={0.35} penumbra={0.6} intensity={0.9} color="#ffffff" target-position={[2.5, 0, 0]} />
+      {/* Lighting - Enhanced for material contrast */}
+      <ambientLight intensity={0.32} />
+      <directionalLight position={[12, 8, 6]} intensity={1.8} color="#ffffff" castShadow shadow-mapSize={[2048, 2048]} />
+      <directionalLight position={[-8, 5, -5]} intensity={1.0} color="#b0d4ff" />
+      <pointLight position={[3.5, 5, 5]} intensity={1.4} color="#3b82f6" distance={14} />
+      <pointLight position={[2.5, -4, -4]} intensity={0.8} color="#f59e0b" distance={12} />
+      <spotLight position={[1, 8, 3]} angle={0.4} penumbra={0.7} intensity={1.2} color="#ffffff" target-position={[2.5, 0, 0]} />
 
       {/* Studio environment */}
       <Environment preset="studio" />
