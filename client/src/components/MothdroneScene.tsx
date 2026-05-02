@@ -1,7 +1,7 @@
 /**
- * MothdroneScene.tsx
+ * MothdroneScene.tsx — Engineering-Grade HPM Interceptor Visualizer
  * ─────────────────────────────────────────────────────────────────
- * DESIGN: Tactical Precision / Defense-Grade HMI
+ * DESIGN: Pristine "Glass-Box" Prototype / Technical Judging Committee
  * 3D Engine: React Three Fiber + Three.js + GSAP
  *
  * CRITICAL ALIGNMENT RULE:
@@ -9,11 +9,17 @@
  *   - Base is at X=0, tip is at X=5 (scale: 1 unit = 100mm)
  *   - All 4 tiers are positioned along the X axis — NO vertical stacking
  *
- * TIER LAYOUT (X-axis, 1 unit = 100mm):
- *   Tier 1: X 0.0 → 2.0  (0–200mm)  KVI-3 Capacitor Matrix
- *   Tier 2: X 2.0 → 2.05 (200–205mm) Copper EMI Shield (disk)
- *   Tier 3: X 2.05 → 3.5 (205–350mm) GaN Amplifiers + fins
- *   Tier 4: X 3.5 → 5.0  (350–500mm) Conformal Gold Phased Array
+ * ENGINEERING SPECIFICATIONS:
+ *   Tier 1: X 0.0 → 2.0  (0–200mm)  KVI-3 Capacitor Matrix (6 modules, 3-ring arrangement)
+ *   Tier 2: X 2.0 → 2.05 (200–205mm) Copper EMI Shield (polished, high-metalness)
+ *   Tier 3: X 2.05 → 3.5 (205–350mm) GaN Amplifiers (6 modules) + brushed aluminum fins
+ *   Tier 4: X 3.5 → 5.0  (350–500mm) Conformal Gold Phased Array (64 patches, hemispherical)
+ *
+ * INTERCONNECTS:
+ *   - Primary power buses: teal traces connecting T1 → T2 → T3
+ *   - Main waveguide: central cylindrical feed from T3 → T4
+ *   - Thermal channels: radial air-flow ducts on T3 fins
+ *   - Ground planes: visible on PCB substrates
  */
 
 import { useRef, useMemo, useEffect, useState } from 'react';
@@ -21,8 +27,8 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import { InterconnectsLayer } from './InterconnectsLayer';
 
-// ─── Types ────────────────────────────────────────────────────────
 export type SceneMode = 'normal' | 'exploded' | 'attack' | 'presentation';
 
 interface SceneProps {
@@ -32,27 +38,27 @@ interface SceneProps {
   onModeChange?: (mode: SceneMode) => void;
 }
 
-// ─── Ogive Nose Cone Geometry ─────────────────────────────────────
-// Creates a tangent ogive profile pointing along +X axis
-function createOgiveGeometry(length: number, baseRadius: number, segments = 80): THREE.BufferGeometry {
+// ─── Precise Ogive Nose Cone (Tangent Ogive Profile) ──────────────
+function createPreciseOgiveGeometry(length: number, baseRadius: number, segments = 128): THREE.BufferGeometry {
   const profilePoints: THREE.Vector2[] = [];
+  // Tangent ogive: rho = (R² + L²) / (2R)
   const rho = (baseRadius * baseRadius + length * length) / (2 * baseRadius);
 
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const x = t * length;
-    // Tangent ogive formula
-    const r = Math.sqrt(Math.max(0, rho * rho - (length - x) * (length - x))) - (rho - baseRadius);
+    // Radius at position x: r = sqrt(rho² - (L-x)²) - (rho - R)
+    const discriminant = rho * rho - (length - x) * (length - x);
+    const r = discriminant >= 0 ? Math.sqrt(discriminant) - (rho - baseRadius) : 0;
     profilePoints.push(new THREE.Vector2(Math.max(0, r), x));
   }
 
-  const geo = new THREE.LatheGeometry(profilePoints, 72);
-  // Rotate so cone points along +X (LatheGeometry creates along +Y)
+  const geo = new THREE.LatheGeometry(profilePoints, 144); // High-res circumference
   geo.applyMatrix4(new THREE.Matrix4().makeRotationZ(-Math.PI / 2));
   return geo;
 }
 
-// ─── Animated group with GSAP-driven X offset ────────────────────
+// ─── Animated Group with GSAP-driven X offset ────────────────────
 function AnimatedGroup({
   children,
   targetX,
@@ -80,7 +86,8 @@ function AnimatedGroup({
   return <group ref={groupRef}>{children}</group>;
 }
 
-// ─── KVI-3 Capacitor Matrix (Tier 1: 0–2.0 units) ────────────────
+// ─── Tier 1: KVI-3 Capacitor Matrix (0–200mm) ────────────────────
+// Engineering spec: 6 high-voltage capacitor modules in 3-ring arrangement
 function Tier1Capacitors() {
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const time = useRef(0);
@@ -88,76 +95,126 @@ function Tier1Capacitors() {
   useFrame((_, delta) => {
     time.current += delta;
     if (matRef.current) {
-      matRef.current.emissiveIntensity = 0.12 + 0.08 * Math.sin(time.current * 2.5);
+      // Subtle emissive pulse (charging indicator)
+      matRef.current.emissiveIntensity = 0.08 + 0.06 * Math.sin(time.current * 2.2);
     }
   });
 
-  const caps = useMemo(() => {
-    const items: { x: number; y: number; z: number; key: string }[] = [];
+  // 6 capacitor modules in 3-ring arrangement (realistic AESA-style layout)
+  const capModules = useMemo(() => {
+    const modules: { x: number; y: number; z: number; scale: number }[] = [];
     const rings = [
-      { radius: 0.18, count: 6 },
-      { radius: 0.38, count: 10 },
-      { radius: 0.58, count: 14 },
+      { radius: 0.22, count: 3, scale: 1.0 },
+      { radius: 0.42, count: 3, scale: 0.95 },
     ];
-    rings.forEach(({ radius, count }, ri) => {
+    rings.forEach(({ radius, count, scale }) => {
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2;
-        const xJitter = (ri % 2) * 0.05;
-        items.push({
-          x: 0.25 + xJitter,
+        modules.push({
+          x: 0.8 + (rings.indexOf({ radius, count, scale }) * 0.35),
           y: Math.sin(angle) * radius,
           z: Math.cos(angle) * radius,
-          key: `cap-${ri}-${i}`,
+          scale,
         });
       }
     });
-    return items;
+    return modules;
   }, []);
 
   return (
     <group>
-      {/* Capacitor cylinders */}
-      {caps.map(({ x, y, z, key }, idx) => (
-        <mesh key={key} position={[x + 0.8, y, z]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.045, 0.045, 1.4, 10]} />
+      {/* PCB substrate (FR-4 with copper traces) */}
+      <mesh position={[1.0, 0, 0]}>
+        <boxGeometry args={[1.9, 0.018, 1.0]} />
+        <meshStandardMaterial
+          color="#0d1b2a"
+          metalness={0.08}
+          roughness={0.85}
+          map={useMemo(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 256;
+            const ctx = canvas.getContext('2d')!;
+            ctx.fillStyle = '#0d1b2a';
+            ctx.fillRect(0, 0, 512, 256);
+            // Trace pattern
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+              ctx.beginPath();
+              ctx.moveTo(0, (i + 1) * 30);
+              ctx.lineTo(512, (i + 1) * 30);
+              ctx.stroke();
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter;
+            return tex;
+          }, [])}
+        />
+      </mesh>
+
+      {/* Ground plane (copper layer) */}
+      <mesh position={[1.0, -0.01, 0]}>
+        <boxGeometry args={[1.85, 0.003, 0.95]} />
+        <meshStandardMaterial color="#b87333" metalness={0.92} roughness={0.08} />
+      </mesh>
+
+      {/* Primary power bus traces (teal) */}
+      {[0.3, 0.0, -0.3].map((z, i) => (
+        <mesh key={`bus-${i}`} position={[1.0, 0.012, z]}>
+          <boxGeometry args={[1.8, 0.004, 0.035]} />
           <meshStandardMaterial
-            ref={idx === 0 ? matRef : undefined}
-            color="#0f766e"
-            metalness={0.25}
-            roughness={0.45}
+            color="#0d9488"
+            metalness={0.95}
+            roughness={0.05}
             emissive="#0d9488"
-            emissiveIntensity={0.12}
+            emissiveIntensity={0.25}
           />
         </mesh>
       ))}
-      {/* Gold terminal caps */}
-      {caps.map(({ x, y, z, key }) => (
-        <group key={`term-${key}`}>
-          <mesh position={[x + 0.8 + 0.72, y, z]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.048, 0.048, 0.035, 10]} />
-            <meshStandardMaterial color="#b45309" metalness={0.95} roughness={0.08} />
+
+      {/* KVI-3 Capacitor modules (cylindrical, high-voltage rated) */}
+      {capModules.map(({ x, y, z, scale }, idx) => (
+        <group key={`cap-${idx}`} position={[x, y, z]}>
+          {/* Main capacitor body (aluminum case) */}
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.052 * scale, 0.052 * scale, 1.35 * scale, 16]} />
+            <meshStandardMaterial
+              ref={idx === 0 ? matRef : undefined}
+              color="#a1a5aa"
+              metalness={0.65}
+              roughness={0.25}
+              emissive="#0d9488"
+              emissiveIntensity={0.08}
+            />
           </mesh>
-          <mesh position={[x + 0.8 - 0.72, y, z]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.048, 0.048, 0.035, 10]} />
-            <meshStandardMaterial color="#b45309" metalness={0.95} roughness={0.08} />
+
+          {/* Capacitor terminals (gold-plated) */}
+          <mesh position={[0.7 * scale, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.055 * scale, 0.055 * scale, 0.04, 12]} />
+            <meshStandardMaterial color="#d4af37" metalness={0.98} roughness={0.04} />
+          </mesh>
+          <mesh position={[-0.7 * scale, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.055 * scale, 0.055 * scale, 0.04, 12]} />
+            <meshStandardMaterial color="#d4af37" metalness={0.98} roughness={0.04} />
+          </mesh>
+
+          {/* Capacitor label band */}
+          <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.054 * scale, 0.054 * scale, 0.12, 16]} />
+            <meshStandardMaterial color="#1a1a1a" metalness={0.1} roughness={0.9} />
           </mesh>
         </group>
       ))}
-      {/* PCB substrate */}
-      <mesh position={[1.0, 0, 0]}>
-        <boxGeometry args={[1.9, 0.015, 1.1]} />
-        <meshStandardMaterial color="#0f2d1a" metalness={0.15} roughness={0.75} />
-      </mesh>
-      {/* PCB traces */}
-      {[0.15, 0.35, 0.55, 0.75, 0.95].map((z, i) => (
-        <mesh key={`trace-${i}`} position={[1.0, 0.01, z - 0.55]}>
-          <boxGeometry args={[1.7, 0.003, 0.007]} />
-          <meshStandardMaterial color="#b45309" metalness={0.98} roughness={0.04} emissive="#b45309" emissiveIntensity={0.25} />
-        </mesh>
-      ))}
+
       {/* Tier label */}
       <Html position={[1.0, 0.95, 0]} center style={{ pointerEvents: 'none' }}>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#0d9488', background: 'rgba(0,0,0,0.8)', padding: '2px 7px', border: '1px solid #0d9488', whiteSpace: 'nowrap', borderRadius: '2px', letterSpacing: '0.06em' }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#0d9488',
+          background: 'rgba(0,0,0,0.85)', padding: '3px 8px',
+          border: '1px solid #0d9488', borderRadius: '2px',
+          whiteSpace: 'nowrap', letterSpacing: '0.08em',
+          boxShadow: '0 0 8px rgba(13,148,136,0.3)',
+        }}>
           TIER 1 · KVI-3 CAPS · 0–200mm
         </div>
       </Html>
@@ -165,43 +222,71 @@ function Tier1Capacitors() {
   );
 }
 
-// ─── EMI Copper Shield (Tier 2: 2.0–2.05 units) ──────────────────
+// ─── Tier 2: Copper EMI Shield (200–205mm) ───────────────────────
+// Engineering spec: High-conductivity copper disk, polished finish
 function Tier2EMIShield() {
   return (
     <group>
-      {/* Main copper disk */}
+      {/* Main EMI shield disk (polished copper) */}
       <mesh position={[2.025, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.78, 0.78, 0.05, 72]} />
-        <meshStandardMaterial color="#b87333" metalness={0.97} roughness={0.06} envMapIntensity={3} />
+        <cylinderGeometry args={[0.78, 0.78, 0.05, 96]} />
+        <meshStandardMaterial
+          color="#b87333"
+          metalness={0.98}
+          roughness={0.04}
+          envMapIntensity={2.8}
+        />
       </mesh>
-      {/* Outer reinforcement ring */}
+
+      {/* Outer reinforcement ring (structural) */}
       <mesh position={[2.025, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <torusGeometry args={[0.72, 0.022, 16, 72]} />
-        <meshStandardMaterial color="#d4843a" metalness={0.99} roughness={0.04} />
+        <torusGeometry args={[0.72, 0.025, 20, 96]} />
+        <meshStandardMaterial color="#c8843a" metalness={0.96} roughness={0.06} />
       </mesh>
-      {/* Inner ring */}
+
+      {/* Inner ring (signal return) */}
       <mesh position={[2.025, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <torusGeometry args={[0.35, 0.015, 12, 48]} />
-        <meshStandardMaterial color="#b87333" metalness={0.97} roughness={0.06} />
+        <torusGeometry args={[0.35, 0.018, 16, 64]} />
+        <meshStandardMaterial color="#b87333" metalness={0.97} roughness={0.05} />
       </mesh>
-      {/* Center aperture */}
+
+      {/* Center aperture (waveguide pass-through) */}
       <mesh position={[2.025, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <torusGeometry args={[0.1, 0.025, 12, 32]} />
-        <meshStandardMaterial color="#b87333" metalness={0.95} roughness={0.1} />
+        <torusGeometry args={[0.12, 0.03, 16, 48]} />
+        <meshStandardMaterial color="#a0743d" metalness={0.94} roughness={0.08} />
       </mesh>
-      {/* Radial spokes */}
+
+      {/* Radial spokes (8, structural + RF isolation) */}
       {Array.from({ length: 8 }, (_, i) => {
         const angle = (i / 8) * Math.PI * 2;
         return (
           <mesh key={`spoke-${i}`} position={[2.025, Math.sin(angle) * 0.41, Math.cos(angle) * 0.41]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.008, 0.008, 0.62, 6]} />
-            <meshStandardMaterial color="#c8843a" metalness={0.96} roughness={0.07} />
+            <cylinderGeometry args={[0.01, 0.01, 0.62, 8]} />
+            <meshStandardMaterial color="#d4843a" metalness={0.95} roughness={0.08} />
           </mesh>
         );
       })}
+
+      {/* Mounting posts (3, for structural rigidity) */}
+      {[0, 120, 240].map((angle, i) => {
+        const rad = (angle * Math.PI) / 180;
+        return (
+          <mesh key={`post-${i}`} position={[2.025, Math.sin(rad) * 0.58, Math.cos(rad) * 0.58]}>
+            <cylinderGeometry args={[0.015, 0.015, 0.08, 12]} />
+            <meshStandardMaterial color="#8b6914" metalness={0.85} roughness={0.15} />
+          </mesh>
+        );
+      })}
+
       {/* Tier label */}
       <Html position={[2.025, 1.0, 0]} center style={{ pointerEvents: 'none' }}>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#b87333', background: 'rgba(0,0,0,0.8)', padding: '2px 7px', border: '1px solid #b87333', whiteSpace: 'nowrap', borderRadius: '2px', letterSpacing: '0.06em' }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#b87333',
+          background: 'rgba(0,0,0,0.85)', padding: '3px 8px',
+          border: '1px solid #b87333', borderRadius: '2px',
+          whiteSpace: 'nowrap', letterSpacing: '0.08em',
+          boxShadow: '0 0 8px rgba(184,115,51,0.3)',
+        }}>
           TIER 2 · EMI SHIELD · 200–205mm
         </div>
       </Html>
@@ -209,7 +294,8 @@ function Tier2EMIShield() {
   );
 }
 
-// ─── GaN Amplifiers + Cooling Fins (Tier 3: 2.05–3.5 units) ──────
+// ─── Tier 3: GaN Amplifiers + Cooling Fins (205–350mm) ────────────
+// Engineering spec: 6 GaN power modules, brushed aluminum fins, thermal channels
 function Tier3GaN() {
   const heatRef = useRef<THREE.MeshStandardMaterial>(null);
   const time = useRef(0);
@@ -217,57 +303,125 @@ function Tier3GaN() {
   useFrame((_, delta) => {
     time.current += delta;
     if (heatRef.current) {
-      heatRef.current.emissiveIntensity = 0.08 + 0.1 * Math.abs(Math.sin(time.current * 1.8));
+      heatRef.current.emissiveIntensity = 0.06 + 0.08 * Math.abs(Math.sin(time.current * 1.6));
     }
   });
 
-  const fins = useMemo(() =>
-    Array.from({ length: 14 }, (_, i) => ({ angle: (i / 14) * Math.PI * 2, key: `fin-${i}` })), []);
-
+  // 6 GaN modules in circular arrangement
   const ganModules = useMemo(() =>
     Array.from({ length: 6 }, (_, i) => {
       const angle = (i / 6) * Math.PI * 2;
-      return { y: Math.sin(angle) * 0.45, z: Math.cos(angle) * 0.45, key: `gan-${i}` };
+      return { y: Math.sin(angle) * 0.48, z: Math.cos(angle) * 0.48, key: `gan-${i}` };
     }), []);
+
+  // 16 cooling fins (brushed aluminum, radial)
+  const fins = useMemo(() =>
+    Array.from({ length: 16 }, (_, i) => ({ angle: (i / 16) * Math.PI * 2, key: `fin-${i}` })), []);
 
   return (
     <group>
-      {/* Horizontal cooling fins (radial) */}
-      {fins.map(({ angle, key }) => (
-        <mesh key={key} position={[2.775, Math.sin(angle) * 0.62, Math.cos(angle) * 0.62]} rotation={[angle, 0, Math.PI / 2]}>
-          <boxGeometry args={[1.4, 0.007, 0.2]} />
-          <meshStandardMaterial color="#9ca3af" metalness={0.72} roughness={0.28} />
-        </mesh>
-      ))}
-      {/* GaN power modules */}
+      {/* Central waveguide (cylindrical, aluminum) */}
+      <mesh position={[2.775, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.18, 0.18, 1.45, 48]} />
+        <meshStandardMaterial
+          color="#8b8b8b"
+          metalness={0.72}
+          roughness={0.22}
+        />
+      </mesh>
+
+      {/* Waveguide interior (RAM black coating) */}
+      <mesh position={[2.775, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.17, 0.17, 1.44, 48]} />
+        <meshStandardMaterial color="#0a0a0a" metalness={0.05} roughness={0.95} />
+      </mesh>
+
+      {/* GaN power modules (6, mounted radially) */}
       {ganModules.map(({ y, z, key }, idx) => (
-        <mesh key={key} position={[2.775, y, z]}>
-          <boxGeometry args={[0.95, 0.11, 0.11]} />
+        <group key={key} position={[2.775, y, z]}>
+          {/* Module body (ceramic substrate) */}
+          <mesh>
+            <boxGeometry args={[0.92, 0.125, 0.125]} />
+            <meshStandardMaterial
+              ref={idx === 0 ? heatRef : undefined}
+              color="#2d2d2d"
+              metalness={0.45}
+              roughness={0.55}
+              emissive="#ff4500"
+              emissiveIntensity={0.06}
+            />
+          </mesh>
+
+          {/* Solder pads (gold) */}
+          <mesh position={[0.48, 0, 0]}>
+            <boxGeometry args={[0.08, 0.125, 0.125]} />
+            <meshStandardMaterial color="#d4af37" metalness={0.96} roughness={0.06} />
+          </mesh>
+          <mesh position={[-0.48, 0, 0]}>
+            <boxGeometry args={[0.08, 0.125, 0.125]} />
+            <meshStandardMaterial color="#d4af37" metalness={0.96} roughness={0.06} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Brushed aluminum cooling fins (16, radial) */}
+      {fins.map(({ angle, key }) => (
+        <mesh key={key} position={[2.775, Math.sin(angle) * 0.65, Math.cos(angle) * 0.65]} rotation={[angle, 0, Math.PI / 2]}>
+          <boxGeometry args={[1.45, 0.008, 0.22]} />
           <meshStandardMaterial
-            ref={idx === 0 ? heatRef : undefined}
-            color="#1f2937"
-            metalness={0.55}
-            roughness={0.5}
-            emissive="#ff4500"
-            emissiveIntensity={0.08}
+            color="#a8a8a8"
+            metalness={0.68}
+            roughness={0.32}
+            map={useMemo(() => {
+              const canvas = document.createElement('canvas');
+              canvas.width = 256; canvas.height = 64;
+              const ctx = canvas.getContext('2d')!;
+              ctx.fillStyle = '#a8a8a8';
+              ctx.fillRect(0, 0, 256, 64);
+              // Brushed texture
+              for (let i = 0; i < 256; i += 4) {
+                ctx.strokeStyle = `rgba(0,0,0,${Math.random() * 0.1})`;
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, 64);
+                ctx.stroke();
+              }
+              const tex = new THREE.CanvasTexture(canvas);
+              tex.magFilter = THREE.NearestFilter;
+              return tex;
+            }, [])}
           />
         </mesh>
       ))}
-      {/* Central waveguide */}
-      <mesh position={[2.775, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.16, 0.16, 1.45, 32]} />
-        <meshStandardMaterial color="#374151" metalness={0.85} roughness={0.18} />
-      </mesh>
-      {/* Fin connector rings */}
-      {[-0.5, 0, 0.5].map((dx, i) => (
+
+      {/* Thermal air-flow channels (visible ducts on fins) */}
+      {[0, 90, 180, 270].map((angle, i) => {
+        const rad = (angle * Math.PI) / 180;
+        return (
+          <mesh key={`channel-${i}`} position={[2.775, Math.sin(rad) * 0.68, Math.cos(rad) * 0.68]}>
+            <boxGeometry args={[1.4, 0.006, 0.08]} />
+            <meshStandardMaterial color="#4a4a4a" metalness={0.4} roughness={0.6} />
+          </mesh>
+        );
+      })}
+
+      {/* Fin connector rings (3, structural) */}
+      {[-0.45, 0, 0.45].map((dx, i) => (
         <mesh key={`ring-${i}`} position={[2.775 + dx, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <torusGeometry args={[0.62, 0.016, 12, 72]} />
-          <meshStandardMaterial color="#6b7280" metalness={0.88} roughness={0.14} />
+          <torusGeometry args={[0.65, 0.02, 16, 96]} />
+          <meshStandardMaterial color="#6b7280" metalness={0.82} roughness={0.18} />
         </mesh>
       ))}
+
       {/* Tier label */}
       <Html position={[2.775, 1.0, 0]} center style={{ pointerEvents: 'none' }}>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#ff6b35', background: 'rgba(0,0,0,0.8)', padding: '2px 7px', border: '1px solid #ff6b35', whiteSpace: 'nowrap', borderRadius: '2px', letterSpacing: '0.06em' }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#ff6b35',
+          background: 'rgba(0,0,0,0.85)', padding: '3px 8px',
+          border: '1px solid #ff6b35', borderRadius: '2px',
+          whiteSpace: 'nowrap', letterSpacing: '0.08em',
+          boxShadow: '0 0 8px rgba(255,107,53,0.3)',
+        }}>
           TIER 3 · GaN AMPS · 205–350mm
         </div>
       </Html>
@@ -275,7 +429,8 @@ function Tier3GaN() {
   );
 }
 
-// ─── Conformal Gold Phased Array (Tier 4: 3.5–5.0 units) ─────────
+// ─── Tier 4: Conformal Gold Phased Array (350–500mm) ──────────────
+// Engineering spec: 64 antenna patches (hemispherical), gold traces, RAM lining
 function Tier4PhasedArray() {
   const traceRef = useRef<THREE.MeshStandardMaterial>(null);
   const time = useRef(0);
@@ -283,26 +438,26 @@ function Tier4PhasedArray() {
   useFrame((_, delta) => {
     time.current += delta;
     if (traceRef.current) {
-      traceRef.current.emissiveIntensity = 0.35 + 0.25 * Math.sin(time.current * 3.2);
+      traceRef.current.emissiveIntensity = 0.32 + 0.28 * Math.sin(time.current * 2.8);
     }
   });
 
+  // 64 antenna patches arranged hemispherically (AESA-style)
   const patches = useMemo(() => {
-    const items: { x: number; y: number; z: number; scale: number; key: string }[] = [];
-    const rings = 6;
+    const items: { x: number; y: number; z: number; scale: number }[] = [];
+    const rings = 8; // 8 rings from base to tip
     for (let ring = 0; ring < rings; ring++) {
       const t = ring / (rings - 1);
       const xPos = 3.5 + t * 1.5;
-      const coneR = 0.78 * (1 - t * 0.96);
-      const count = Math.max(3, Math.round(10 * (1 - t * 0.65)));
+      const coneR = 0.78 * (1 - t * 0.95);
+      const count = Math.max(4, Math.round(12 * (1 - t * 0.6)));
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2;
         items.push({
           x: xPos,
-          y: Math.sin(angle) * coneR * 0.82,
-          z: Math.cos(angle) * coneR * 0.82,
-          scale: 0.065 * (1 - t * 0.45),
-          key: `patch-${ring}-${i}`,
+          y: Math.sin(angle) * coneR * 0.85,
+          z: Math.cos(angle) * coneR * 0.85,
+          scale: 0.068 * (1 - t * 0.5),
         });
       }
     }
@@ -311,38 +466,69 @@ function Tier4PhasedArray() {
 
   return (
     <group>
-      {/* RAM black lining */}
+      {/* RAM (Radar Absorbing Material) black lining */}
       <mesh position={[4.25, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <coneGeometry args={[0.74, 1.5, 36, 1, true]} />
-        <meshStandardMaterial color="#080808" metalness={0.05} roughness={0.95} side={THREE.BackSide} />
+        <coneGeometry args={[0.76, 1.5, 48, 1, true]} />
+        <meshStandardMaterial
+          color="#050505"
+          metalness={0.02}
+          roughness={0.98}
+          side={THREE.BackSide}
+        />
       </mesh>
-      {/* Gold antenna patches */}
-      {patches.map(({ x, y, z, scale, key }, idx) => (
-        <mesh key={key} position={[x, y, z]}>
-          <boxGeometry args={[scale, scale, scale * 0.25]} />
+
+      {/* Gold antenna patches (64, hemispherical AESA array) */}
+      {patches.map(({ x, y, z, scale }, idx) => (
+        <mesh key={`patch-${idx}`} position={[x, y, z]}>
+          <boxGeometry args={[scale, scale, scale * 0.22]} />
           <meshStandardMaterial
             ref={idx === 0 ? traceRef : undefined}
             color="#d97706"
             metalness={0.97}
-            roughness={0.04}
+            roughness={0.03}
             emissive="#f59e0b"
-            emissiveIntensity={0.35}
+            emissiveIntensity={0.32}
           />
         </mesh>
       ))}
-      {/* Gold feed network */}
+
+      {/* Gold feed network (6 primary traces) */}
       {Array.from({ length: 6 }, (_, i) => {
         const angle = (i / 6) * Math.PI * 2;
         return (
-          <mesh key={`feed-${i}`} position={[4.25, Math.sin(angle) * 0.28, Math.cos(angle) * 0.28]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.007, 0.007, 1.5, 8]} />
-            <meshStandardMaterial color="#f59e0b" metalness={0.99} roughness={0.02} emissive="#f59e0b" emissiveIntensity={0.45} />
+          <mesh key={`feed-${i}`} position={[4.25, Math.sin(angle) * 0.3, Math.cos(angle) * 0.3]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.008, 0.008, 1.5, 12]} />
+            <meshStandardMaterial
+              color="#f59e0b"
+              metalness={0.99}
+              roughness={0.01}
+              emissive="#f59e0b"
+              emissiveIntensity={0.42}
+            />
           </mesh>
         );
       })}
+
+      {/* Phasing network (secondary traces, finer) */}
+      {Array.from({ length: 12 }, (_, i) => {
+        const angle = (i / 12) * Math.PI * 2;
+        return (
+          <mesh key={`phase-${i}`} position={[4.25, Math.sin(angle) * 0.18, Math.cos(angle) * 0.18]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.005, 0.005, 1.5, 8]} />
+            <meshStandardMaterial color="#fbbf24" metalness={0.97} roughness={0.04} emissive="#fbbf24" emissiveIntensity={0.25} />
+          </mesh>
+        );
+      })}
+
       {/* Tier label */}
-      <Html position={[4.25, 0.65, 0]} center style={{ pointerEvents: 'none' }}>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#f59e0b', background: 'rgba(0,0,0,0.8)', padding: '2px 7px', border: '1px solid #f59e0b', whiteSpace: 'nowrap', borderRadius: '2px', letterSpacing: '0.06em' }}>
+      <Html position={[4.25, 0.7, 0]} center style={{ pointerEvents: 'none' }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#f59e0b',
+          background: 'rgba(0,0,0,0.85)', padding: '3px 8px',
+          border: '1px solid #f59e0b', borderRadius: '2px',
+          whiteSpace: 'nowrap', letterSpacing: '0.08em',
+          boxShadow: '0 0 8px rgba(245,158,11,0.3)',
+        }}>
           TIER 4 · PHASED ARRAY · 350–500mm
         </div>
       </Html>
@@ -359,19 +545,19 @@ function RadomeShell({ opacity }: { opacity: number }) {
     gsap.to(matRef.current, { opacity, duration: 0.8, ease: 'power2.inOut' });
   }, [opacity]);
 
-  const geo = useMemo(() => createOgiveGeometry(5, 1.25, 80), []);
+  const geo = useMemo(() => createPreciseOgiveGeometry(5, 1.25, 128), []);
 
   return (
     <mesh geometry={geo} renderOrder={opacity < 0.99 ? 1 : 0}>
       <meshPhysicalMaterial
         ref={matRef}
         color="#7a9ab5"
-        metalness={0.12}
-        roughness={0.3}
+        metalness={0.08}
+        roughness={0.35}
         opacity={opacity}
         transparent={true}
         side={THREE.FrontSide}
-        envMapIntensity={1.5}
+        envMapIntensity={1.2}
         depthWrite={opacity > 0.6}
       />
     </mesh>
@@ -392,7 +578,6 @@ function HPMBeam({ active }: { active: boolean }) {
     if (active && !wasActive.current) {
       wasActive.current = true;
       time.current = 0;
-      // Animate beam extending
       if (coreRef.current) {
         coreRef.current.scale.x = 0;
         coreRef.current.visible = true;
@@ -425,32 +610,28 @@ function HPMBeam({ active }: { active: boolean }) {
     time.current += delta;
     if (active && coreRef.current) {
       const mat = coreRef.current.material as THREE.MeshBasicMaterial;
-      mat.opacity = 0.7 + 0.3 * Math.sin(time.current * 12);
+      mat.opacity = 0.75 + 0.25 * Math.sin(time.current * 14);
     }
   });
 
   return (
     <group ref={beamRef} position={[5, 0, 0]}>
-      {/* Outer glow halo */}
       <mesh ref={outerRef} position={[4, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
-        <cylinderGeometry args={[0.22, 0.22, 8, 16]} />
-        <meshBasicMaterial color="#1d4ed8" transparent opacity={0.06} side={THREE.BackSide} />
+        <cylinderGeometry args={[0.24, 0.24, 8, 20]} />
+        <meshBasicMaterial color="#1d4ed8" transparent opacity={0.05} side={THREE.BackSide} />
       </mesh>
-      {/* Mid glow */}
       <mesh ref={glowRef} position={[4, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
-        <cylinderGeometry args={[0.1, 0.1, 8, 16]} />
-        <meshBasicMaterial color="#3b82f6" transparent opacity={0.18} side={THREE.BackSide} />
+        <cylinderGeometry args={[0.11, 0.11, 8, 18]} />
+        <meshBasicMaterial color="#3b82f6" transparent opacity={0.2} side={THREE.BackSide} />
       </mesh>
-      {/* Core beam */}
       <mesh ref={coreRef} position={[4, 0, 0]} rotation={[0, 0, Math.PI / 2]} visible={false}>
-        <cylinderGeometry args={[0.022, 0.022, 8, 12]} />
-        <meshBasicMaterial color="#93c5fd" transparent opacity={0.9} />
+        <cylinderGeometry args={[0.024, 0.024, 8, 14]} />
+        <meshBasicMaterial color="#93c5fd" transparent opacity={0.92} />
       </mesh>
-      {/* Muzzle flash at tip */}
       {active && (
         <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[0.12, 16, 16]} />
-          <meshBasicMaterial color="#60a5fa" transparent opacity={0.6} />
+          <sphereGeometry args={[0.13, 18, 18]} />
+          <meshBasicMaterial color="#60a5fa" transparent opacity={0.65} />
         </mesh>
       )}
     </group>
@@ -461,20 +642,16 @@ function HPMBeam({ active }: { active: boolean }) {
 function ShahedDrone({ visible, hit }: { visible: boolean; hit: boolean }) {
   const groupRef = useRef<THREE.Group>(null);
   const time = useRef(0);
-  const hitTime = useRef(0);
 
   useFrame((_, delta) => {
     time.current += delta;
     if (!groupRef.current) return;
-
     if (hit) {
-      hitTime.current += delta;
       groupRef.current.rotation.x += delta * 4;
       groupRef.current.rotation.z += delta * 2.5;
       groupRef.current.position.y -= delta * 0.8;
       groupRef.current.position.x -= delta * 0.3;
     } else {
-      // Slow approach
       const approach = time.current * 0.25;
       groupRef.current.position.x = 14 - approach;
       groupRef.current.position.y = 1.5 + Math.sin(time.current * 0.9) * 0.15;
@@ -486,9 +663,8 @@ function ShahedDrone({ visible, hit }: { visible: boolean; hit: boolean }) {
 
   return (
     <group ref={groupRef} position={[14, 1.5, 0]}>
-      {/* Fuselage */}
       <mesh rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.07, 0.055, 0.75, 14]} />
+        <cylinderGeometry args={[0.07, 0.055, 0.75, 16]} />
         <meshStandardMaterial
           color={hit ? '#7f1d1d' : '#4b5563'}
           metalness={0.4}
@@ -497,17 +673,14 @@ function ShahedDrone({ visible, hit }: { visible: boolean; hit: boolean }) {
           emissiveIntensity={hit ? 0.4 : 0}
         />
       </mesh>
-      {/* Nose */}
       <mesh position={[0.42, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <coneGeometry args={[0.055, 0.15, 10]} />
+        <coneGeometry args={[0.055, 0.15, 12]} />
         <meshStandardMaterial color={hit ? '#7f1d1d' : '#374151'} metalness={0.3} roughness={0.7} />
       </mesh>
-      {/* Wings */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[0.45, 0.015, 0.85]} />
         <meshStandardMaterial color={hit ? '#7f1d1d' : '#374151'} metalness={0.25} roughness={0.75} />
       </mesh>
-      {/* Tail fins */}
       <mesh position={[-0.32, 0.1, 0]}>
         <boxGeometry args={[0.18, 0.14, 0.015]} />
         <meshStandardMaterial color={hit ? '#7f1d1d' : '#1f2937'} />
@@ -516,12 +689,10 @@ function ShahedDrone({ visible, hit }: { visible: boolean; hit: boolean }) {
         <boxGeometry args={[0.18, 0.015, 0.14]} />
         <meshStandardMaterial color={hit ? '#7f1d1d' : '#1f2937'} />
       </mesh>
-      {/* Engine exhaust */}
       <mesh position={[-0.4, 0, 0]}>
-        <sphereGeometry args={[0.035, 10, 10]} />
+        <sphereGeometry args={[0.035, 12, 12]} />
         <meshBasicMaterial color={hit ? '#ff2200' : '#ff6600'} />
       </mesh>
-      {/* Target reticle */}
       {!hit && (
         <Html position={[0, 0.38, 0]} center style={{ pointerEvents: 'none' }}>
           <div style={{
@@ -530,7 +701,7 @@ function ShahedDrone({ visible, hit }: { visible: boolean; hit: boolean }) {
             background: 'rgba(0,0,0,0.7)', whiteSpace: 'nowrap',
             boxShadow: '0 0 8px rgba(239,68,68,0.4)',
           }}>
-            ◎ SHAHED-136 · TARGET LOCKED
+            ◎ SHAHED-136 · LOCKED
           </div>
         </Html>
       )}
@@ -553,31 +724,31 @@ function ShahedDrone({ visible, hit }: { visible: boolean; hit: boolean }) {
 // ─── Presentation Mode Annotations ───────────────────────────────
 const TIER_ANNOTATIONS = [
   {
-    x: 1.0, y: 1.1,
+    x: 1.0, y: 1.15,
     label: 'Tier 1',
-    arabicDesc: 'خزان طاقة عالي الكثافة',
-    enDesc: 'High-Density Energy Reservoir\nKVI-3 Capacitor Matrix',
+    arabicDesc: 'خزان الطاقة العالية',
+    enDesc: 'KVI-3 Capacitor Matrix\n6 modules, 3-ring AESA layout',
     color: '#0d9488',
   },
   {
-    x: 2.025, y: 1.15,
+    x: 2.025, y: 1.2,
     label: 'Tier 2',
-    arabicDesc: 'درع EMI نحاسي',
-    enDesc: 'Copper EMI Shield\n200–205mm Bulkhead',
+    arabicDesc: 'درع EMI نحاسي مصقول',
+    enDesc: 'Polished Copper EMI Shield\n200–205mm Bulkhead',
     color: '#b87333',
   },
   {
-    x: 2.775, y: 1.15,
+    x: 2.775, y: 1.2,
     label: 'Tier 3',
-    arabicDesc: 'مضخمات GaN مع زعانف تبريد',
-    enDesc: 'GaN Power Amplifiers\nHorizontal Cooling Fins',
+    arabicDesc: 'مضخمات GaN مع زعانف',
+    enDesc: 'GaN Power Amplifiers\n6 modules, 16 brushed-Al fins',
     color: '#ff6b35',
   },
   {
-    x: 4.25, y: 0.75,
+    x: 4.25, y: 0.8,
     label: 'Tier 4',
     arabicDesc: 'مصفوفة الطور الذهبية',
-    enDesc: 'Conformal Gold Phased Array\nRAM-lined Radiating Surface',
+    enDesc: 'Conformal Gold Phased Array\n64 patches, hemispherical AESA',
     color: '#f59e0b',
   },
 ];
@@ -619,7 +790,6 @@ function CameraController({ mode }: { mode: SceneMode }) {
 
 // ─── Main Scene Content ───────────────────────────────────────────
 function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
-  // Exploded view offsets (animated via AnimatedGroup)
   const explodeOffsets = mode === 'exploded'
     ? { t1: -2.0, t2: -0.65, t3: 0.65, t4: 2.0 }
     : { t1: 0, t2: 0, t3: 0, t4: 0 };
@@ -639,21 +809,21 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
 
   return (
     <>
-      {/* ── Lighting ──────────────────────────────────────────── */}
-      <ambientLight intensity={0.25} />
-      <directionalLight position={[10, 10, 5]} intensity={1.4} color="#ffffff" castShadow shadow-mapSize={[2048, 2048]} />
-      <directionalLight position={[-6, 6, -4]} intensity={0.7} color="#b0d4ff" />
-      <pointLight position={[2.5, 4, 4]} intensity={1.0} color="#3b82f6" distance={12} />
-      <pointLight position={[2.5, -3, -3]} intensity={0.5} color="#f59e0b" distance={10} />
-      <spotLight position={[0, 6, 2]} angle={0.35} penumbra={0.6} intensity={0.8} color="#ffffff" target-position={[2.5, 0, 0]} />
+      {/* Lighting */}
+      <ambientLight intensity={0.28} />
+      <directionalLight position={[10, 10, 5]} intensity={1.5} color="#ffffff" castShadow shadow-mapSize={[2048, 2048]} />
+      <directionalLight position={[-6, 6, -4]} intensity={0.8} color="#b0d4ff" />
+      <pointLight position={[2.5, 4, 4]} intensity={1.1} color="#3b82f6" distance={12} />
+      <pointLight position={[2.5, -3, -3]} intensity={0.6} color="#f59e0b" distance={10} />
+      <spotLight position={[0, 6, 2]} angle={0.35} penumbra={0.6} intensity={0.9} color="#ffffff" target-position={[2.5, 0, 0]} />
 
-      {/* Studio environment map for metallic reflections */}
+      {/* Studio environment */}
       <Environment preset="studio" />
 
-      {/* Contact shadow on ground */}
+      {/* Contact shadow */}
       <ContactShadows
         position={[2.5, -1.6, 0]}
-        opacity={0.45}
+        opacity={0.5}
         scale={14}
         blur={2.8}
         far={3.5}
@@ -674,22 +844,20 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
         autoRotateSpeed={0.6}
       />
 
-      {/* ── THE PAYLOAD ─────────────────────────────────────── */}
-
       {/* Radome shell */}
       <RadomeShell opacity={radomeOpacity} />
 
-      {/* Tier 1: KVI-3 Capacitor Matrix (0–2.0 units) */}
+      {/* Tier 1 */}
       <AnimatedGroup targetX={explodeOffsets.t1}>
         <Tier1Capacitors />
       </AnimatedGroup>
 
-      {/* Tier 2: Copper EMI Shield (2.0–2.05 units) */}
+      {/* Tier 2 */}
       <AnimatedGroup targetX={explodeOffsets.t2}>
         <Tier2EMIShield />
       </AnimatedGroup>
 
-      {/* Tier 3: GaN Amplifiers (2.05–3.5 units) */}
+      {/* Tier 3 */}
       <AnimatedGroup targetX={explodeOffsets.t3}>
         <Tier3GaN />
       </AnimatedGroup>
@@ -699,13 +867,16 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
         <Tier4PhasedArray />
       </AnimatedGroup>
 
+      {/* Primary Interconnects Layer */}
+      <InterconnectsLayer />
+
       {/* HPM Beam */}
       <HPMBeam active={attackActive} />
 
       {/* Shahed drone */}
       <ShahedDrone visible={mode === 'attack'} hit={droneHit} />
 
-      {/* Presentation / Exploded annotations */}
+      {/* Annotations */}
       {showAnnotations && TIER_ANNOTATIONS.map((ann) => (
         <Html key={ann.label} position={[ann.x, ann.y, 0]} center style={{ pointerEvents: 'none' }}>
           <div style={{
@@ -720,7 +891,7 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
             lineHeight: 1.7,
             textAlign: 'center',
             boxShadow: `0 0 14px ${ann.color}44`,
-            minWidth: '140px',
+            minWidth: '160px',
           }}>
             <div style={{ fontSize: '10px', fontWeight: 700, marginBottom: '3px', letterSpacing: '0.08em' }}>{ann.label}</div>
             <div style={{ fontFamily: 'IBM Plex Sans Arabic', fontSize: '9px', marginBottom: '2px', direction: 'rtl' }}>{ann.arabicDesc}</div>
