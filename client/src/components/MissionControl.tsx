@@ -12,11 +12,14 @@ import { useEffect, useRef, useState } from 'react';
 import { SceneMode } from './MothdroneScene';
 
 // ─── Telemetry hook ───────────────────────────────────────────────
+// TIER 1: Charging (KVI-3 Capacitor pulse source)
+// TIER 3: Thermal (GaN RF amplifiers generating heat)
+// TIER 4: Beam Steering (Phased array antenna emitting)
 function useTelemetry(mode: SceneMode) {
-  const [chargeLevel, setChargeLevel] = useState(0);
-  const [ganTemp, setGanTemp] = useState(42);
-  const [beamAngle, setBeamAngle] = useState(0);
-  const [targetRange, setTargetRange] = useState(1200);
+  const [chargeLevel, setChargeLevel] = useState(0); // Tier 1: Capacitor charge
+  const [ganTemp, setGanTemp] = useState(42); // Tier 3: GaN amplifier temperature
+  const [beamAngle, setBeamAngle] = useState(0); // Tier 4: Antenna steering angle
+  const [targetRange, setTargetRange] = useState(1200); // Tier 4: Target distance
   const [systemStatus, setSystemStatus] = useState<'STANDBY' | 'CHARGING' | 'READY' | 'FIRING'>('STANDBY');
   const chargeRef = useRef(0);
 
@@ -385,34 +388,31 @@ export default function MissionControl({
           ))}
         </div>
       </div>
-
-      {/* ── HPM Status ─────────────────────────────────────────── */}
-      <Panel title="حالة HPM" titleEn="HPM STATUS" color="#3b82f6">
+      {/* ─── TIER 1: Pulse Source Status ─────────────────────────────── */}
+      <Panel title="حالة مصدر النبض" titleEn="TIER 1 · PULSE SOURCE" color="#0d9488">
         <ChargeBar level={chargeLevel} status={systemStatus} />
         <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', direction: 'ltr' }}>
-          <DataCell label="KVI-3 CAPS" value={`${(chargeLevel * 4.2).toFixed(0)} V`} color="#0d9488" />
-          <DataCell label="PULSE ENERGY" value={`${(chargeLevel * 0.85).toFixed(1)} kJ`} color="#3b82f6" />
-          <DataCell label="READY" value={chargeLevel >= 95 ? '● YES' : '○ NO'} color={chargeLevel >= 95 ? '#3b82f6' : '#374151'} />
+          <DataCell label="KVI-3 CHARGE" value={`${(chargeLevel * 4.2).toFixed(0)} V`} color="#0d9488" />
+          <DataCell label="PULSE ENERGY" value={`${(chargeLevel * 0.85).toFixed(1)} kJ`} color="#0d9488" />
+          <DataCell label="READY" value={chargeLevel >= 95 ? '● YES' : '○ NO'} color={chargeLevel >= 95 ? '#0d9488' : '#374151'} />
         </div>
       </Panel>
 
-      {/* ── Thermal Monitor ────────────────────────────────────── */}
-      <Panel title="مراقبة الحرارة" titleEn="THERMAL MONITOR" color="#ff6b35">
+      {/* ─── TIER 3: RF Amplifier Thermal Status ────────────────────── */}
+      <Panel title="حالة مضخم RF" titleEn="TIER 3 · GaN AMPLIFIER" color="#ff6b35">
         <ThermalGauge temp={ganTemp} />
         <div style={{ marginTop: '6px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', direction: 'ltr' }}>
-          <DataCell label="PEAK TEMP" value={`${(ganTemp + 26).toFixed(1)}°C`} color={ganTemp + 26 > 180 ? '#ef4444' : '#f59e0b'} />
-          <DataCell label="COOLANT FLOW" value="2.4 L/min" color="#22c55e" />
+          <DataCell label="GaN PEAK TEMP" value={`${(ganTemp + 26).toFixed(1)}°C`} color={ganTemp + 26 > 180 ? '#ef4444' : '#ff6b35'} />
+          <DataCell label="COOLING FLOW" value="2.4 L/min" color="#22c55e" />
         </div>
-      </Panel>
-
-      {/* ── Beam Steering ──────────────────────────────────────── */}
-      <Panel title="توجيه الحزمة" titleEn="BEAM STEERING" color="#f59e0b">
+      </Panel>      {/* ─── TIER 4: Phased Array Antenna Steering ────────────────── */}
+      <Panel title="توجيه الهوائي" titleEn="TIER 4 · ANTENNA STEERING" color="#f59e0b">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', direction: 'ltr' }}>
           <RadarDisplay angle={beamAngle} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <DataCell label="AZIMUTH" value={`${beamAngle.toFixed(1)}°`} color="#f59e0b" />
             <DataCell label="ELEVATION" value={`${(Math.sin(beamAngle * 0.02) * 15 + 5).toFixed(1)}°`} color="#f59e0b" />
-            <DataCell label="ARRAY MODE" value="SCAN · Phased Array" color="#f59e0b" />
+            <DataCell label="ARRAY MODE" value="PHASED ARRAY · ACTIVE" color="#f59e0b" />
           </div>
         </div>
       </Panel>

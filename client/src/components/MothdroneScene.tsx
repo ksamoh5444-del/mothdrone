@@ -1,25 +1,31 @@
 /**
  * MothdroneScene.tsx — Engineering-Grade HPM Interceptor Visualizer
  * ─────────────────────────────────────────────────────────────────
- * DESIGN: Pristine "Glass-Box" Prototype / Technical Judging Committee
- * 3D Engine: React Three Fiber + Three.js + GSAP
+ * CORRECT ENERGY KILL CHAIN (BASE → APEX):
  *
- * CRITICAL ALIGNMENT RULE:
- *   - The ogive nose cone points along the +X axis (horizontal / longitudinal)
- *   - Base is at X=0, tip is at X=5 (scale: 1 unit = 100mm)
- *   - All 4 tiers are positioned along the X axis — NO vertical stacking
+ * External Power: Drone main battery → Tier 1 (slow DC charge)
  *
- * ENGINEERING SPECIFICATIONS:
- *   Tier 1: X 0.0 → 2.0  (0–200mm)  KVI-3 Capacitor Matrix (6 modules, 3-ring arrangement)
- *   Tier 2: X 2.0 → 2.05 (200–205mm) Copper EMI Shield (polished, high-metalness)
- *   Tier 3: X 2.05 → 3.5 (205–350mm) GaN Amplifiers (6 modules) + brushed aluminum fins
- *   Tier 4: X 3.5 → 5.0  (350–500mm) Conformal Gold Phased Array (64 patches, hemispherical)
+ * Tier 1 (0–200mm): KVI-3 Capacitor Matrix
+ *   - Receives DC from drone battery
+ *   - Stores energy
+ *   - PULSES high-voltage discharge on command
  *
- * INTERCONNECTS:
- *   - Primary power buses: teal traces connecting T1 → T2 → T3
- *   - Main waveguide: central cylindrical feed from T3 → T4
- *   - Thermal channels: radial air-flow ducts on T3 fins
- *   - Ground planes: visible on PCB substrates
+ * Tier 2 (200–205mm): Copper EMI Shield (Faraday Bulkhead)
+ *   - Blocks EM backscatter
+ *   - Protects drone avionics from own weapon
+ *
+ * Tier 3 (205–350mm): GaN Amplifiers + Cooling Fins
+ *   - Receives HIGH-VOLTAGE PULSE from Tier 1
+ *   - Converts pulse to high-frequency microwaves
+ *   - Amplifies RF signal
+ *   - Dissipates intense heat via fins
+ *
+ * Tier 4 (350–500mm): Conformal Phased Array Antenna
+ *   - Receives amplified RF from Tier 3 via waveguide
+ *   - Acts as directional lens (NOT a power source)
+ *   - Emits/steers focused HPM beam toward target
+ *
+ * ENERGY FLOW: Tier 1 (PULSE) → Tier 3 (AMPLIFY) → Tier 4 (EMIT)
  */
 
 import { useRef, useMemo, useEffect, useState } from 'react';
@@ -38,27 +44,25 @@ interface SceneProps {
   onModeChange?: (mode: SceneMode) => void;
 }
 
-// ─── Precise Ogive Nose Cone (Tangent Ogive Profile) ──────────────
+// ─── Precise Ogive Nose Cone ──────────────────────────────────────
 function createPreciseOgiveGeometry(length: number, baseRadius: number, segments = 128): THREE.BufferGeometry {
   const profilePoints: THREE.Vector2[] = [];
-  // Tangent ogive: rho = (R² + L²) / (2R)
   const rho = (baseRadius * baseRadius + length * length) / (2 * baseRadius);
 
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const x = t * length;
-    // Radius at position x: r = sqrt(rho² - (L-x)²) - (rho - R)
     const discriminant = rho * rho - (length - x) * (length - x);
     const r = discriminant >= 0 ? Math.sqrt(discriminant) - (rho - baseRadius) : 0;
     profilePoints.push(new THREE.Vector2(Math.max(0, r), x));
   }
 
-  const geo = new THREE.LatheGeometry(profilePoints, 144); // High-res circumference
+  const geo = new THREE.LatheGeometry(profilePoints, 144);
   geo.applyMatrix4(new THREE.Matrix4().makeRotationZ(-Math.PI / 2));
   return geo;
 }
 
-// ─── Animated Group with GSAP-driven X offset ────────────────────
+// ─── Animated Group ───────────────────────────────────────────────
 function AnimatedGroup({
   children,
   targetX,
@@ -87,7 +91,7 @@ function AnimatedGroup({
 }
 
 // ─── Tier 1: KVI-3 Capacitor Matrix (0–200mm) ────────────────────
-// Engineering spec: 6 high-voltage capacitor modules in 3-ring arrangement
+// ENERGY SOURCE: Receives DC from drone battery, stores, and PULSES
 function Tier1Capacitors() {
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const time = useRef(0);
@@ -95,12 +99,11 @@ function Tier1Capacitors() {
   useFrame((_, delta) => {
     time.current += delta;
     if (matRef.current) {
-      // Subtle emissive pulse (charging indicator)
-      matRef.current.emissiveIntensity = 0.08 + 0.06 * Math.sin(time.current * 2.2);
+      // Charging pulse indicator
+      matRef.current.emissiveIntensity = 0.08 + 0.12 * Math.sin(time.current * 2.5);
     }
   });
 
-  // 6 capacitor modules in 3-ring arrangement (realistic AESA-style layout)
   const capModules = useMemo(() => {
     const modules: { x: number; y: number; z: number; scale: number }[] = [];
     const rings = [
@@ -123,44 +126,21 @@ function Tier1Capacitors() {
 
   return (
     <group>
-      {/* PCB substrate (FR-4 with copper traces) */}
+      {/* PCB substrate (FR-4) */}
       <mesh position={[1.0, 0, 0]}>
         <boxGeometry args={[1.9, 0.018, 1.0]} />
-        <meshStandardMaterial
-          color="#0d1b2a"
-          metalness={0.08}
-          roughness={0.85}
-          map={useMemo(() => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 256;
-            const ctx = canvas.getContext('2d')!;
-            ctx.fillStyle = '#0d1b2a';
-            ctx.fillRect(0, 0, 512, 256);
-            // Trace pattern
-            ctx.strokeStyle = '#b45309';
-            ctx.lineWidth = 2;
-            for (let i = 0; i < 8; i++) {
-              ctx.beginPath();
-              ctx.moveTo(0, (i + 1) * 30);
-              ctx.lineTo(512, (i + 1) * 30);
-              ctx.stroke();
-            }
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter;
-            return tex;
-          }, [])}
-        />
+        <meshStandardMaterial color="#0d1b2a" metalness={0.08} roughness={0.85} />
       </mesh>
 
-      {/* Ground plane (copper layer) */}
+      {/* Ground plane */}
       <mesh position={[1.0, -0.01, 0]}>
         <boxGeometry args={[1.85, 0.003, 0.95]} />
         <meshStandardMaterial color="#b87333" metalness={0.92} roughness={0.08} />
       </mesh>
 
-      {/* Primary power bus traces (teal) */}
+      {/* Input power traces from drone battery (teal) */}
       {[0.3, 0.0, -0.3].map((z, i) => (
-        <mesh key={`bus-${i}`} position={[1.0, 0.012, z]}>
+        <mesh key={`input-${i}`} position={[1.0, 0.012, z]}>
           <boxGeometry args={[1.8, 0.004, 0.035]} />
           <meshStandardMaterial
             color="#0d9488"
@@ -172,10 +152,9 @@ function Tier1Capacitors() {
         </mesh>
       ))}
 
-      {/* KVI-3 Capacitor modules (cylindrical, high-voltage rated) */}
+      {/* KVI-3 Capacitor modules */}
       {capModules.map(({ x, y, z, scale }, idx) => (
         <group key={`cap-${idx}`} position={[x, y, z]}>
-          {/* Main capacitor body (aluminum case) */}
           <mesh rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.052 * scale, 0.052 * scale, 1.35 * scale, 16]} />
             <meshStandardMaterial
@@ -187,8 +166,6 @@ function Tier1Capacitors() {
               emissiveIntensity={0.08}
             />
           </mesh>
-
-          {/* Capacitor terminals (gold-plated) */}
           <mesh position={[0.7 * scale, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.055 * scale, 0.055 * scale, 0.04, 12]} />
             <meshStandardMaterial color="#d4af37" metalness={0.98} roughness={0.04} />
@@ -197,8 +174,6 @@ function Tier1Capacitors() {
             <cylinderGeometry args={[0.055 * scale, 0.055 * scale, 0.04, 12]} />
             <meshStandardMaterial color="#d4af37" metalness={0.98} roughness={0.04} />
           </mesh>
-
-          {/* Capacitor label band */}
           <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.054 * scale, 0.054 * scale, 0.12, 16]} />
             <meshStandardMaterial color="#1a1a1a" metalness={0.1} roughness={0.9} />
@@ -215,30 +190,25 @@ function Tier1Capacitors() {
           whiteSpace: 'nowrap', letterSpacing: '0.08em',
           boxShadow: '0 0 8px rgba(13,148,136,0.3)',
         }}>
-          TIER 1 · KVI-3 CAPS · 0–200mm
+          TIER 1 · KVI-3 PULSE SOURCE · 0–200mm
         </div>
       </Html>
     </group>
   );
 }
 
-// ─── Tier 2: Copper EMI Shield (200–205mm) ───────────────────────
-// Engineering spec: High-conductivity copper disk, polished finish
+// ─── Tier 2: Copper EMI Shield / Faraday Bulkhead (200–205mm) ──────
+// PROTECTION: Blocks EM backscatter, protects drone avionics
 function Tier2EMIShield() {
   return (
     <group>
       {/* Main EMI shield disk (polished copper) */}
       <mesh position={[2.025, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.78, 0.78, 0.05, 96]} />
-        <meshStandardMaterial
-          color="#b87333"
-          metalness={0.98}
-          roughness={0.04}
-          envMapIntensity={2.8}
-        />
+        <meshStandardMaterial color="#b87333" metalness={0.98} roughness={0.04} envMapIntensity={2.8} />
       </mesh>
 
-      {/* Outer reinforcement ring (structural) */}
+      {/* Outer reinforcement ring */}
       <mesh position={[2.025, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <torusGeometry args={[0.72, 0.025, 20, 96]} />
         <meshStandardMaterial color="#c8843a" metalness={0.96} roughness={0.06} />
@@ -250,13 +220,13 @@ function Tier2EMIShield() {
         <meshStandardMaterial color="#b87333" metalness={0.97} roughness={0.05} />
       </mesh>
 
-      {/* Center aperture (waveguide pass-through) */}
+      {/* Center aperture (pulse pass-through) */}
       <mesh position={[2.025, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <torusGeometry args={[0.12, 0.03, 16, 48]} />
         <meshStandardMaterial color="#a0743d" metalness={0.94} roughness={0.08} />
       </mesh>
 
-      {/* Radial spokes (8, structural + RF isolation) */}
+      {/* Radial spokes (8, structural + EM isolation) */}
       {Array.from({ length: 8 }, (_, i) => {
         const angle = (i / 8) * Math.PI * 2;
         return (
@@ -267,7 +237,7 @@ function Tier2EMIShield() {
         );
       })}
 
-      {/* Mounting posts (3, for structural rigidity) */}
+      {/* Mounting posts (3) */}
       {[0, 120, 240].map((angle, i) => {
         const rad = (angle * Math.PI) / 180;
         return (
@@ -295,7 +265,7 @@ function Tier2EMIShield() {
 }
 
 // ─── Tier 3: GaN Amplifiers + Cooling Fins (205–350mm) ────────────
-// Engineering spec: 6 GaN power modules, brushed aluminum fins, thermal channels
+// RF GENERATION & AMPLIFICATION: Converts pulse to RF, amplifies, dissipates heat
 function Tier3GaN() {
   const heatRef = useRef<THREE.MeshStandardMaterial>(null);
   const time = useRef(0);
@@ -303,34 +273,29 @@ function Tier3GaN() {
   useFrame((_, delta) => {
     time.current += delta;
     if (heatRef.current) {
-      heatRef.current.emissiveIntensity = 0.06 + 0.08 * Math.abs(Math.sin(time.current * 1.6));
+      // Heat generation during RF amplification
+      heatRef.current.emissiveIntensity = 0.06 + 0.14 * Math.abs(Math.sin(time.current * 1.8));
     }
   });
 
-  // 6 GaN modules in circular arrangement
   const ganModules = useMemo(() =>
     Array.from({ length: 6 }, (_, i) => {
       const angle = (i / 6) * Math.PI * 2;
       return { y: Math.sin(angle) * 0.48, z: Math.cos(angle) * 0.48, key: `gan-${i}` };
     }), []);
 
-  // 16 cooling fins (brushed aluminum, radial)
   const fins = useMemo(() =>
     Array.from({ length: 16 }, (_, i) => ({ angle: (i / 16) * Math.PI * 2, key: `fin-${i}` })), []);
 
   return (
     <group>
-      {/* Central waveguide (cylindrical, aluminum) */}
+      {/* Central waveguide (RF feed from Tier 1 pulse) */}
       <mesh position={[2.775, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.18, 0.18, 1.45, 48]} />
-        <meshStandardMaterial
-          color="#8b8b8b"
-          metalness={0.72}
-          roughness={0.22}
-        />
+        <meshStandardMaterial color="#8b8b8b" metalness={0.72} roughness={0.22} />
       </mesh>
 
-      {/* Waveguide interior (RAM black coating) */}
+      {/* Waveguide interior (RAM black) */}
       <mesh position={[2.775, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.17, 0.17, 1.44, 48]} />
         <meshStandardMaterial color="#0a0a0a" metalness={0.05} roughness={0.95} />
@@ -339,7 +304,6 @@ function Tier3GaN() {
       {/* GaN power modules (6, mounted radially) */}
       {ganModules.map(({ y, z, key }, idx) => (
         <group key={key} position={[2.775, y, z]}>
-          {/* Module body (ceramic substrate) */}
           <mesh>
             <boxGeometry args={[0.92, 0.125, 0.125]} />
             <meshStandardMaterial
@@ -351,8 +315,6 @@ function Tier3GaN() {
               emissiveIntensity={0.06}
             />
           </mesh>
-
-          {/* Solder pads (gold) */}
           <mesh position={[0.48, 0, 0]}>
             <boxGeometry args={[0.08, 0.125, 0.125]} />
             <meshStandardMaterial color="#d4af37" metalness={0.96} roughness={0.06} />
@@ -368,33 +330,11 @@ function Tier3GaN() {
       {fins.map(({ angle, key }) => (
         <mesh key={key} position={[2.775, Math.sin(angle) * 0.65, Math.cos(angle) * 0.65]} rotation={[angle, 0, Math.PI / 2]}>
           <boxGeometry args={[1.45, 0.008, 0.22]} />
-          <meshStandardMaterial
-            color="#a8a8a8"
-            metalness={0.68}
-            roughness={0.32}
-            map={useMemo(() => {
-              const canvas = document.createElement('canvas');
-              canvas.width = 256; canvas.height = 64;
-              const ctx = canvas.getContext('2d')!;
-              ctx.fillStyle = '#a8a8a8';
-              ctx.fillRect(0, 0, 256, 64);
-              // Brushed texture
-              for (let i = 0; i < 256; i += 4) {
-                ctx.strokeStyle = `rgba(0,0,0,${Math.random() * 0.1})`;
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i, 64);
-                ctx.stroke();
-              }
-              const tex = new THREE.CanvasTexture(canvas);
-              tex.magFilter = THREE.NearestFilter;
-              return tex;
-            }, [])}
-          />
+          <meshStandardMaterial color="#a8a8a8" metalness={0.68} roughness={0.32} />
         </mesh>
       ))}
 
-      {/* Thermal air-flow channels (visible ducts on fins) */}
+      {/* Thermal air-flow channels (visible ducts) */}
       {[0, 90, 180, 270].map((angle, i) => {
         const rad = (angle * Math.PI) / 180;
         return (
@@ -405,7 +345,7 @@ function Tier3GaN() {
         );
       })}
 
-      {/* Fin connector rings (3, structural) */}
+      {/* Fin connector rings (3) */}
       {[-0.45, 0, 0.45].map((dx, i) => (
         <mesh key={`ring-${i}`} position={[2.775 + dx, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
           <torusGeometry args={[0.65, 0.02, 16, 96]} />
@@ -422,7 +362,7 @@ function Tier3GaN() {
           whiteSpace: 'nowrap', letterSpacing: '0.08em',
           boxShadow: '0 0 8px rgba(255,107,53,0.3)',
         }}>
-          TIER 3 · GaN AMPS · 205–350mm
+          TIER 3 · GaN RF AMP · 205–350mm
         </div>
       </Html>
     </group>
@@ -430,7 +370,7 @@ function Tier3GaN() {
 }
 
 // ─── Tier 4: Conformal Gold Phased Array (350–500mm) ──────────────
-// Engineering spec: 64 antenna patches (hemispherical), gold traces, RAM lining
+// EMISSION & BEAM STEERING: Receives RF from Tier 3, emits focused HPM beam
 function Tier4PhasedArray() {
   const traceRef = useRef<THREE.MeshStandardMaterial>(null);
   const time = useRef(0);
@@ -438,14 +378,14 @@ function Tier4PhasedArray() {
   useFrame((_, delta) => {
     time.current += delta;
     if (traceRef.current) {
+      // RF emission pulse
       traceRef.current.emissiveIntensity = 0.32 + 0.28 * Math.sin(time.current * 2.8);
     }
   });
 
-  // 64 antenna patches arranged hemispherically (AESA-style)
   const patches = useMemo(() => {
     const items: { x: number; y: number; z: number; scale: number }[] = [];
-    const rings = 8; // 8 rings from base to tip
+    const rings = 8;
     for (let ring = 0; ring < rings; ring++) {
       const t = ring / (rings - 1);
       const xPos = 3.5 + t * 1.5;
@@ -466,18 +406,13 @@ function Tier4PhasedArray() {
 
   return (
     <group>
-      {/* RAM (Radar Absorbing Material) black lining */}
+      {/* RAM black lining */}
       <mesh position={[4.25, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <coneGeometry args={[0.76, 1.5, 48, 1, true]} />
-        <meshStandardMaterial
-          color="#050505"
-          metalness={0.02}
-          roughness={0.98}
-          side={THREE.BackSide}
-        />
+        <meshStandardMaterial color="#050505" metalness={0.02} roughness={0.98} side={THREE.BackSide} />
       </mesh>
 
-      {/* Gold antenna patches (64, hemispherical AESA array) */}
+      {/* Gold antenna patches (64, hemispherical AESA) */}
       {patches.map(({ x, y, z, scale }, idx) => (
         <mesh key={`patch-${idx}`} position={[x, y, z]}>
           <boxGeometry args={[scale, scale, scale * 0.22]} />
@@ -492,7 +427,7 @@ function Tier4PhasedArray() {
         </mesh>
       ))}
 
-      {/* Gold feed network (6 primary traces) */}
+      {/* Gold feed network (6 primary RF feeds from Tier 3) */}
       {Array.from({ length: 6 }, (_, i) => {
         const angle = (i / 6) * Math.PI * 2;
         return (
@@ -509,7 +444,7 @@ function Tier4PhasedArray() {
         );
       })}
 
-      {/* Phasing network (secondary traces, finer) */}
+      {/* Phasing network (secondary traces) */}
       {Array.from({ length: 12 }, (_, i) => {
         const angle = (i / 12) * Math.PI * 2;
         return (
@@ -564,7 +499,7 @@ function RadomeShell({ opacity }: { opacity: number }) {
   );
 }
 
-// ─── HPM Beam ─────────────────────────────────────────────────────
+// ─── HPM Beam (Emitted from Tier 4 Antenna) ───────────────────────
 function HPMBeam({ active }: { active: boolean }) {
   const beamRef = useRef<THREE.Group>(null);
   const coreRef = useRef<THREE.Mesh>(null);
@@ -726,29 +661,29 @@ const TIER_ANNOTATIONS = [
   {
     x: 1.0, y: 1.15,
     label: 'Tier 1',
-    arabicDesc: 'خزان الطاقة العالية',
-    enDesc: 'KVI-3 Capacitor Matrix\n6 modules, 3-ring AESA layout',
+    arabicDesc: 'مصدر الطاقة النبضية',
+    enDesc: 'KVI-3 Pulse Source\nCharges from drone battery, pulses on command',
     color: '#0d9488',
   },
   {
     x: 2.025, y: 1.2,
     label: 'Tier 2',
-    arabicDesc: 'درع EMI نحاسي مصقول',
-    enDesc: 'Polished Copper EMI Shield\n200–205mm Bulkhead',
+    arabicDesc: 'درع فاراداي',
+    enDesc: 'Copper EMI Shield\nProtects drone avionics from backscatter',
     color: '#b87333',
   },
   {
     x: 2.775, y: 1.2,
     label: 'Tier 3',
-    arabicDesc: 'مضخمات GaN مع زعانف',
-    enDesc: 'GaN Power Amplifiers\n6 modules, 16 brushed-Al fins',
+    arabicDesc: 'مضخم RF وتبريد',
+    enDesc: 'GaN RF Amplifier\nConverts pulse to RF, amplifies signal',
     color: '#ff6b35',
   },
   {
     x: 4.25, y: 0.8,
     label: 'Tier 4',
-    arabicDesc: 'مصفوفة الطور الذهبية',
-    enDesc: 'Conformal Gold Phased Array\n64 patches, hemispherical AESA',
+    arabicDesc: 'هوائي الانبعاث',
+    enDesc: 'Phased Array Antenna\nEmits focused HPM beam toward target',
     color: '#f59e0b',
   },
 ];
@@ -847,22 +782,22 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
       {/* Radome shell */}
       <RadomeShell opacity={radomeOpacity} />
 
-      {/* Tier 1 */}
+      {/* Tier 1: KVI-3 Pulse Source */}
       <AnimatedGroup targetX={explodeOffsets.t1}>
         <Tier1Capacitors />
       </AnimatedGroup>
 
-      {/* Tier 2 */}
+      {/* Tier 2: EMI Shield */}
       <AnimatedGroup targetX={explodeOffsets.t2}>
         <Tier2EMIShield />
       </AnimatedGroup>
 
-      {/* Tier 3 */}
+      {/* Tier 3: GaN RF Amplifier */}
       <AnimatedGroup targetX={explodeOffsets.t3}>
         <Tier3GaN />
       </AnimatedGroup>
 
-      {/* Tier 4: Conformal Gold Phased Array (3.5–5.0 units) */}
+      {/* Tier 4: Phased Array Antenna */}
       <AnimatedGroup targetX={explodeOffsets.t4}>
         <Tier4PhasedArray />
       </AnimatedGroup>
@@ -870,10 +805,10 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
       {/* Primary Interconnects Layer */}
       <InterconnectsLayer />
 
-      {/* HPM Beam */}
+      {/* HPM Beam (emitted from Tier 4) */}
       <HPMBeam active={attackActive} />
 
-      {/* Shahed drone */}
+      {/* Shahed drone target */}
       <ShahedDrone visible={mode === 'attack'} hit={droneHit} />
 
       {/* Annotations */}

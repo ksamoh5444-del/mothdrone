@@ -1,8 +1,13 @@
 /**
- * InterconnectsLayer.tsx
+ * InterconnectsLayer.tsx — Correct Energy Kill Chain
  * ─────────────────────────────────────────────────────────────────
- * Primary interconnects: power buses, waveguides, thermal channels
- * Rendered as a separate layer for clarity and visual hierarchy.
+ * ENERGY FLOW: Tier 1 (PULSE) → Tier 3 (AMPLIFY) → Tier 4 (EMIT)
+ *
+ * Primary interconnects:
+ *   - High-voltage pulse buses: T1 → T3 (teal)
+ *   - Main RF waveguide: T3 → T4 (gold)
+ *   - Thermal cooling channels: T3 fins
+ *   - Ground return paths: T1 ↔ T3 ↔ T4
  */
 
 import { useRef, useMemo } from 'react';
@@ -17,62 +22,45 @@ export function InterconnectsLayer() {
     time.current += delta;
   });
 
-  // ─── Primary Power Buses (Tier 1 → Tier 2 → Tier 3) ──────────────
-  // Three main teal traces carrying high voltage from capacitors through EMI shield to GaN amps
-  const powerBuses = useMemo(() => {
+  // ─── High-Voltage Pulse Buses (Tier 1 → Tier 3) ──────────────────
+  // Three main teal traces carrying the high-voltage pulse from KVI-3 capacitors to GaN amplifiers
+  const pulseBuses = useMemo(() => {
     const buses: { start: [number, number, number]; end: [number, number, number]; color: string; width: number }[] = [];
 
-    // Bus 1: Top trace
+    // Bus 1: Top trace (T1 → T3)
     buses.push({
       start: [1.0, 0.35, 0],
-      end: [2.025, 0.35, 0],
-      color: '#0d9488',
-      width: 0.018,
-    });
-    buses.push({
-      start: [2.025, 0.35, 0],
       end: [2.775, 0.35, 0],
       color: '#0d9488',
-      width: 0.016,
+      width: 0.022,
     });
 
-    // Bus 2: Middle trace
+    // Bus 2: Middle trace (T1 → T3)
     buses.push({
       start: [1.0, 0, 0],
-      end: [2.025, 0, 0],
-      color: '#0d9488',
-      width: 0.018,
-    });
-    buses.push({
-      start: [2.025, 0, 0],
       end: [2.775, 0, 0],
       color: '#0d9488',
-      width: 0.016,
+      width: 0.022,
     });
 
-    // Bus 3: Bottom trace
+    // Bus 3: Bottom trace (T1 → T3)
     buses.push({
       start: [1.0, -0.35, 0],
-      end: [2.025, -0.35, 0],
-      color: '#0d9488',
-      width: 0.018,
-    });
-    buses.push({
-      start: [2.025, -0.35, 0],
       end: [2.775, -0.35, 0],
       color: '#0d9488',
-      width: 0.016,
+      width: 0.022,
     });
 
     return buses;
   }, []);
 
-  // ─── Main Waveguide (Tier 3 → Tier 4) ───────────────────────────
-  // Central RF waveguide feed from GaN amplifiers to phased array
-  // Already rendered in MothdroneScene as part of Tier 3 geometry
+  // ─── RF Waveguide (Tier 3 → Tier 4) ──────────────────────────────
+  // Main waveguide feed from GaN amplifiers to phased array antenna
+  // (Already rendered as part of Tier 3 geometry — central cylindrical waveguide)
+  // This layer adds the RF feed traces connecting the waveguide to the antenna patches
 
   // ─── Secondary RF Feeds (Tier 3 → Tier 4) ──────────────────────
-  // 6 secondary feeds from GaN modules to phased array feed network
+  // 6 secondary RF feeds from GaN modules to phased array feed network
   const rfFeeds = useMemo(() => {
     const feeds: { angle: number; radius: number }[] = [];
     for (let i = 0; i < 6; i++) {
@@ -84,16 +72,12 @@ export function InterconnectsLayer() {
     return feeds;
   }, []);
 
-  // ─── Thermal Air-Flow Channels (Tier 3) ──────────────────────────
-  // Visible RAM-lined ducts for cooling air circulation
-  // Already rendered in MothdroneScene as part of Tier 3 fins
-
-  // ─── Ground Return Paths (All Tiers) ─────────────────────────────
-  // Thin copper traces connecting ground planes
+  // ─── Ground Return Paths (T1 ↔ T3 ↔ T4) ──────────────────────────
+  // Copper traces connecting ground planes across all tiers
   const groundPaths = useMemo(() => {
     const paths: { start: [number, number, number]; end: [number, number, number] }[] = [];
 
-    // Tier 1 to Tier 2
+    // T1 to T2 (through EMI shield)
     paths.push({
       start: [1.9, 0.45, 0],
       end: [2.05, 0.45, 0],
@@ -103,7 +87,7 @@ export function InterconnectsLayer() {
       end: [2.05, -0.45, 0],
     });
 
-    // Tier 2 to Tier 3
+    // T2 to T3 (through EMI shield)
     paths.push({
       start: [2.05, 0.45, 0],
       end: [2.1, 0.45, 0],
@@ -113,13 +97,23 @@ export function InterconnectsLayer() {
       end: [2.1, -0.45, 0],
     });
 
+    // T3 to T4 (return path)
+    paths.push({
+      start: [3.4, 0.5, 0],
+      end: [3.8, 0.5, 0],
+    });
+    paths.push({
+      start: [3.4, -0.5, 0],
+      end: [3.8, -0.5, 0],
+    });
+
     return paths;
   }, []);
 
   return (
     <group ref={groupRef}>
-      {/* ─── Primary Power Buses ──────────────────────────────────── */}
-      {powerBuses.map((bus, idx) => {
+      {/* ─── High-Voltage Pulse Buses (T1 → T3) ────────────────────── */}
+      {pulseBuses.map((bus, idx) => {
         const [sx, sy, sz] = bus.start;
         const [ex, ey, ez] = bus.end;
         const length = Math.sqrt((ex - sx) ** 2 + (ey - sy) ** 2 + (ez - sz) ** 2);
@@ -129,14 +123,14 @@ export function InterconnectsLayer() {
         const angle = Math.atan2(ey - sy, ex - sx);
 
         return (
-          <mesh key={`bus-${idx}`} position={[midX, midY, midZ]} rotation={[0, 0, angle]}>
-            <boxGeometry args={[length, bus.width, 0.006]} />
+          <mesh key={`pulse-bus-${idx}`} position={[midX, midY, midZ]} rotation={[0, 0, angle]}>
+            <boxGeometry args={[length, bus.width, 0.008]} />
             <meshStandardMaterial
               color={bus.color}
-              metalness={0.94}
-              roughness={0.05}
+              metalness={0.96}
+              roughness={0.04}
               emissive={bus.color}
-              emissiveIntensity={0.22}
+              emissiveIntensity={0.28}
             />
           </mesh>
         );
@@ -156,20 +150,19 @@ export function InterconnectsLayer() {
         const midY = (startY + endY) / 2;
         const midZ = (startZ + endZ) / 2;
 
-        // Compute rotation to align with feed direction
         const dir = new THREE.Vector3(endX - startX, endY - startY, endZ - startZ).normalize();
         const quat = new THREE.Quaternion();
         quat.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
 
         return (
           <mesh key={`rf-feed-${idx}`} position={[midX, midY, midZ]} quaternion={quat}>
-            <boxGeometry args={[length, 0.008, 0.008]} />
+            <boxGeometry args={[length, 0.01, 0.01]} />
             <meshStandardMaterial
               color="#f59e0b"
-              metalness={0.96}
-              roughness={0.04}
+              metalness={0.98}
+              roughness={0.02}
               emissive="#f59e0b"
-              emissiveIntensity={0.28}
+              emissiveIntensity={0.35}
             />
           </mesh>
         );
@@ -187,55 +180,63 @@ export function InterconnectsLayer() {
 
         return (
           <mesh key={`gnd-${idx}`} position={[midX, midY, midZ]} rotation={[0, 0, angle]}>
-            <boxGeometry args={[length, 0.012, 0.004]} />
+            <boxGeometry args={[length, 0.014, 0.005]} />
             <meshStandardMaterial
               color="#8b6914"
-              metalness={0.88}
-              roughness={0.12}
+              metalness={0.90}
+              roughness={0.10}
             />
           </mesh>
         );
       })}
 
-      {/* ─── Connector Posts (Mechanical/Electrical) ──────────────── */}
-      {/* Tier 1 to Tier 2 connectors */}
-      {[0, 120, 240].map((angle, i) => {
-        const rad = (angle * Math.PI) / 180;
-        const x = 1.95 + Math.sin(rad) * 0.3;
-        const y = Math.sin(rad) * 0.3;
-        const z = Math.cos(rad) * 0.3;
+      {/* ─── Mechanical Connectors (Pulse Path) ────────────────────── */}
+      {/* T1 to T3 pulse connectors (6 points around the payload) */}
+      {Array.from({ length: 6 }, (_, i) => {
+        const angle = (i / 6) * Math.PI * 2;
+        const x = 1.85 + (i % 2) * 0.9;
+        const y = Math.sin(angle) * 0.35;
+        const z = Math.cos(angle) * 0.35;
         return (
-          <mesh key={`conn-12-${i}`} position={[x, y, z]}>
-            <cylinderGeometry args={[0.012, 0.012, 0.05, 10]} />
-            <meshStandardMaterial color="#8b6914" metalness={0.82} roughness={0.18} />
+          <mesh key={`conn-pulse-${i}`} position={[x, y, z]}>
+            <cylinderGeometry args={[0.014, 0.014, 0.06, 10]} />
+            <meshStandardMaterial color="#0d9488" metalness={0.88} roughness={0.12} emissive="#0d9488" emissiveIntensity={0.15} />
           </mesh>
         );
       })}
 
-      {/* Tier 2 to Tier 3 connectors */}
-      {[0, 120, 240].map((angle, i) => {
-        const rad = (angle * Math.PI) / 180;
-        const x = 2.4 + Math.sin(rad) * 0.35;
-        const y = Math.sin(rad) * 0.35;
-        const z = Math.cos(rad) * 0.35;
-        return (
-          <mesh key={`conn-23-${i}`} position={[x, y, z]}>
-            <cylinderGeometry args={[0.012, 0.012, 0.05, 10]} />
-            <meshStandardMaterial color="#8b6914" metalness={0.82} roughness={0.18} />
-          </mesh>
-        );
-      })}
-
-      {/* Tier 3 to Tier 4 connectors (main waveguide + RF feeds) */}
+      {/* ─── RF Waveguide Connectors (T3 to T4) ────────────────────── */}
       {[0, 90, 180, 270].map((angle, i) => {
         const rad = (angle * Math.PI) / 180;
         const x = 3.4 + Math.sin(rad) * 0.4;
         const y = Math.sin(rad) * 0.4;
         const z = Math.cos(rad) * 0.4;
         return (
-          <mesh key={`conn-34-${i}`} position={[x, y, z]}>
-            <cylinderGeometry args={[0.013, 0.013, 0.06, 10]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.94} roughness={0.08} />
+          <mesh key={`conn-rf-${i}`} position={[x, y, z]}>
+            <cylinderGeometry args={[0.015, 0.015, 0.07, 10]} />
+            <meshStandardMaterial color="#f59e0b" metalness={0.96} roughness={0.06} emissive="#f59e0b" emissiveIntensity={0.2} />
+          </mesh>
+        );
+      })}
+
+      {/* ─── Thermal Duct Visualization (T3 cooling) ───────────────── */}
+      {/* Already rendered as part of Tier 3 geometry (cooling fins and channels) */}
+      {/* This adds visual emphasis to the thermal routing */}
+      {[0, 60, 120, 180, 240, 300].map((angle, i) => {
+        const rad = (angle * Math.PI) / 180;
+        const x = 2.775;
+        const y = Math.sin(rad) * 0.72;
+        const z = Math.cos(rad) * 0.72;
+        return (
+          <mesh key={`thermal-${i}`} position={[x, y, z]}>
+            <boxGeometry args={[1.4, 0.008, 0.12]} />
+            <meshStandardMaterial
+              color="#ff6b35"
+              metalness={0.35}
+              roughness={0.65}
+              emissive="#ff6b35"
+              emissiveIntensity={0.08}
+            />
           </mesh>
         );
       })}
