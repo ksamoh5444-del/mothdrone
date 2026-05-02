@@ -483,7 +483,7 @@ function RadomeShell({ opacity }: { opacity: number }) {
   const geo = useMemo(() => createPreciseOgiveGeometry(5, 1.25, 128), []);
 
   return (
-    <mesh geometry={geo} renderOrder={opacity < 0.99 ? 1 : 0}>
+    <mesh geometry={geo} rotation={[0, 0, Math.PI]} renderOrder={opacity < 0.99 ? 1 : 0}>
       <meshPhysicalMaterial
         ref={matRef}
         color="#7a9ab5"
