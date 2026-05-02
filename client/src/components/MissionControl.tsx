@@ -101,7 +101,7 @@ function RadarDisplay({ angle }: { angle: number }) {
     });
 
     // Cross
-    ctx.strokeStyle = 'rgba(59,130,246,0.12)';
+    ctx.strokeStyle = 'rgba(59,130,246,0.2)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
@@ -114,8 +114,8 @@ function RadarDisplay({ angle }: { angle: number }) {
     ctx.translate(cx, cy);
     ctx.rotate(sweepAngle);
     const grad = ctx.createLinearGradient(0, 0, r, 0);
-    grad.addColorStop(0, 'rgba(59,130,246,0.55)');
-    grad.addColorStop(1, 'rgba(59,130,246,0)');
+    grad.addColorStop(0, 'rgba(59,130,246,0.4)');
+    grad.addColorStop(1, 'rgba(59,130,246,0.05)');
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.arc(0, 0, r, -0.45, 0.45);
@@ -126,7 +126,7 @@ function RadarDisplay({ angle }: { angle: number }) {
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 1.5;
     ctx.shadowColor = '#3b82f6';
-    ctx.shadowBlur = 5;
+    ctx.shadowBlur = 4;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(r, 0);
@@ -136,7 +136,7 @@ function RadarDisplay({ angle }: { angle: number }) {
     // Center
     ctx.fillStyle = '#3b82f6';
     ctx.shadowColor = '#3b82f6';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 5;
     ctx.beginPath();
     ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
     ctx.fill();
@@ -246,10 +246,10 @@ function Panel({
 }) {
   return (
     <div style={{
-      border: `1px solid ${color}28`,
+      border: `1px solid ${color}40`,
       borderRadius: '2px',
       padding: '10px 11px',
-      background: 'rgba(4,8,18,0.6)',
+      background: '#f8fafc',
       position: 'relative',
     }}>
       {/* Corner brackets */}
@@ -330,8 +330,8 @@ export default function MissionControl({
     <div style={{
       width: '100%',
       height: '100%',
-      background: 'rgba(4, 8, 20, 0.97)',
-      borderLeft: '1px solid rgba(59,130,246,0.15)',
+      background: '#ffffff',
+      borderLeft: '1px solid rgba(59,130,246,0.2)',
       display: 'flex',
       flexDirection: 'column',
       gap: '7px',
@@ -341,10 +341,10 @@ export default function MissionControl({
     }}>
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div style={{ borderBottom: '1px solid rgba(59,130,246,0.15)', paddingBottom: '8px' }}>
+      <div style={{ borderBottom: '1px solid rgba(59,130,246,0.2)', paddingBottom: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontFamily: 'IBM Plex Sans Arabic', fontSize: '15px', fontWeight: 700, color: '#e2e8f0' }}>
+            <div style={{ fontFamily: 'IBM Plex Sans Arabic', fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
               نظام MOTH-HPM
             </div>
             <div style={{ fontFamily: 'JetBrains Mono', fontSize: '8px', color: '#3b82f6', letterSpacing: '0.12em', marginTop: '2px', direction: 'ltr' }}>
@@ -362,7 +362,7 @@ export default function MissionControl({
                 {systemStatus}
               </span>
             </div>
-            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '7px', color: '#1e293b', marginTop: '3px' }}>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '7px', color: '#0f172a', marginTop: '3px' }}>
               {time}
             </div>
           </div>
@@ -378,12 +378,12 @@ export default function MissionControl({
           ].map(({ k, v }) => (
             <div key={k} style={{
               fontFamily: 'JetBrains Mono', fontSize: '7px',
-              color: '#4b5563', background: '#070d1a',
+              color: '#4b5563', background: '#f0f4f8',
               padding: '2px 6px', borderRadius: '1px',
-              border: '1px solid #0f1e2e',
+              border: '1px solid #cbd5e1',
             }}>
-              <span style={{ color: '#1e293b' }}>{k}:</span>{' '}
-              <span style={{ color: '#64748b' }}>{v}</span>
+              <span style={{ color: '#0f172a' }}>{k}:</span>{' '}
+              <span style={{ color: '#475569' }}>{v}</span>
             </div>
           ))}
         </div>
