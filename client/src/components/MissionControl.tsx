@@ -10,6 +10,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { SceneMode } from './MothdroneScene';
+import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
+import TelemetrySparkline from './TelemetrySparkline';
 
 // ─── Telemetry hook ───────────────────────────────────────────────
 // TIER 1: Charging (KVI-3 Capacitor pulse source)
@@ -305,7 +307,8 @@ export default function MissionControl({
   showAnnotations,
   onAnnotationsChange,
 }: MissionControlProps) {
-  const { chargeLevel, ganTemp, beamAngle, targetRange, systemStatus } = useTelemetry(mode);
+  const telemetry = useLiveTelemetry(mode);
+  const { chargeLevel, chargeVoltage, pulseEnergy, ganTemp, ganTempSparkline, coolingFlow, beamAzimuth, beamElevation, targetRange, systemStatus, isPulsing } = telemetry;
   const [time, setTime] = useState('');
 
   useEffect(() => {
@@ -403,15 +406,19 @@ export default function MissionControl({
         <ThermalGauge temp={ganTemp} />
         <div style={{ marginTop: '6px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', direction: 'ltr' }}>
           <DataCell label="GaN PEAK TEMP" value={`${(ganTemp + 26).toFixed(1)}°C`} color={ganTemp + 26 > 180 ? '#ef4444' : '#ff6b35'} />
-          <DataCell label="COOLING FLOW" value="2.4 L/min" color="#22c55e" />
+          <DataCell label="COOLING FLOW" value={`${coolingFlow.toFixed(1)} L/min`} color="#22c55e" />
+        </div>
+        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', direction: 'ltr' }}>
+          <span style={{ fontFamily: 'JetBrains Mono', fontSize: '7px', color: '#666', minWidth: '60px' }}>TEMP TREND</span>
+          <TelemetrySparkline data={ganTempSparkline} min={30} max={220} color="#ff6b35" height={20} />
         </div>
       </Panel>      {/* ─── TIER 4: Phased Array Antenna Steering ────────────────── */}
       <Panel title="توجيه الهوائي" titleEn="TIER 4 · ANTENNA STEERING" color="#f59e0b">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', direction: 'ltr' }}>
-          <RadarDisplay angle={beamAngle} />
+          <RadarDisplay angle={beamAzimuth} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <DataCell label="AZIMUTH" value={`${beamAngle.toFixed(1)}°`} color="#f59e0b" />
-            <DataCell label="ELEVATION" value={`${(Math.sin(beamAngle * 0.02) * 15 + 5).toFixed(1)}°`} color="#f59e0b" />
+            <DataCell label="AZIMUTH" value={`${beamAzimuth.toFixed(1)}°`} color="#f59e0b" />
+            <DataCell label="ELEVATION" value={`${beamElevation.toFixed(1)}°`} color="#f59e0b" />
             <DataCell label="ARRAY MODE" value="PHASED ARRAY · ACTIVE" color="#f59e0b" />
           </div>
         </div>

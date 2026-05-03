@@ -31,9 +31,12 @@
 import { useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Html } from '@react-three/drei';
+import { Bloom, EffectComposer } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { InterconnectsLayer } from './InterconnectsLayer';
+import ElectromagneticShockwave from './ElectromagneticShockwave';
+import { PBRMaterials, createPBRMaterial } from '@/lib/pbrMaterials';
 
 export type SceneMode = 'normal' | 'exploded' | 'attack' | 'presentation';
 
@@ -77,8 +80,8 @@ function AnimatedGroup({
     if (!groupRef.current) return;
     gsap.to(currentX, {
       current: targetX,
-      duration: 1.2,
-      ease: 'power3.inOut',
+      duration: 0.8,
+      ease: 'back.out(1.4)',
       onUpdate: () => {
         if (groupRef.current) {
           groupRef.current.position.x = currentX.current;
@@ -750,6 +753,11 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
 
   return (
     <>
+      {/* Post-processing effects */}
+      <EffectComposer>
+        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} />
+      </EffectComposer>
+
       {/* Lighting - Enhanced for material contrast */}
       <ambientLight intensity={0.32} />
       <directionalLight position={[12, 8, 6]} intensity={1.8} color="#ffffff" castShadow shadow-mapSize={[2048, 2048]} />
@@ -758,8 +766,8 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
       <pointLight position={[2.5, -4, -4]} intensity={0.8} color="#f59e0b" distance={12} />
       <spotLight position={[1, 8, 3]} angle={0.4} penumbra={0.7} intensity={1.2} color="#ffffff" target-position={[2.5, 0, 0]} />
 
-      {/* Studio environment */}
-      <Environment preset="studio" />
+      {/* Warehouse HDRi for PBR reflections */}
+      <Environment preset="warehouse" />
 
       {/* Contact shadow */}
       <ContactShadows
@@ -813,6 +821,9 @@ function SceneContent({ mode, radomeOpacity, showAnnotations }: SceneProps) {
 
       {/* HPM Beam (emitted from Tier 4) */}
       <HPMBeam active={attackActive} />
+
+      {/* Electromagnetic Shockwave VFX */}
+      <ElectromagneticShockwave active={attackActive} position={[5.0, 0, 0]} />
 
       {/* Shahed drone target */}
       <ShahedDrone visible={mode === 'attack'} hit={droneHit} />
