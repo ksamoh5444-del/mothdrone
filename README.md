@@ -1,4 +1,4 @@
-# MothDrone: 3D Mission Control Interface
+# MothDrone: 3D Mission  Interface
 
 This branch contains the advanced **3D Visualization Suite** for the MothDrone project, developed as a high-fidelity "Mission Control" center. It provides real-time monitoring of VTOL interception maneuvers using a modern web-based stack.
 
